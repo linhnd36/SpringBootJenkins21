@@ -1,14 +1,18 @@
-# Use an official OpenJDK runtime as a parent image
-FROM openjdk:21-jdk-slim
+FROM --platform=linux/amd64 maven:3.9.9-amazoncorretto-21-debian AS builder
 
-# Set the working directory in the container
-WORKDIR /app
+# add pom.xml and source code
+COPY ./pom.xml pom.xml
+COPY ./src src/
 
-# Copy the jar file into the container
-COPY target/SpringBootJenkin21-0.0.1-SNAPSHOT.jar /app/app.jar
+# package jar
+RUN mvn clean package -DskipTests
 
-# Expose the port that your Spring Boot app runs on
+# Second stage: minimal runtime environment
+From --platform=linux/amd64 amazoncorretto:21-alpine3.17
+
+# copy jar from the first stage
+COPY --from=builder target/*.jar my-app-1.0-SNAPSHOT.jar
+
 EXPOSE 8080
 
-# Run the jar file
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+CMD ["java", "-jar", "my-app-1.0-SNAPSHOT.jar"]
